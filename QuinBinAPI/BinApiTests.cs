@@ -1,519 +1,422 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
-using System.IO;
-using NUnit;
+using System.Collections.Generic;
 
 namespace QuinBinAPI
-{    
+{
     [TestClass]
     public class BinApiTests
-     {
-        
-        [TestInitialize]
-        public void Init()
-        {
-        }
+    {
+        private JsonBinsClient client = new JsonBinsClient("https://api.jsonbin.io/b");
+        const string secretKey = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
+        const string contentType = "application/json";
+        const string defaultBody = "{\"sample\":\"Hello World\"}";
+        const string testCollectionId = "5efa1fd57f16b71d48a81da8";
+
 
         [TestMethod]
         public void AddPrivateBin()
         {
-            HttpWebRequest request;
-            HttpWebResponse response =null;
-  
-            string endPoint = "https://api.jsonbin.io/b";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
 
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
+            string binBody = JsonConvert.SerializeObject(new
             {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "Hellow World"
-                 });
+                sample = "Hellow World"
+            });
 
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-            
-            try
+            var headers = new Dictionary<string, string>
             {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                                 
-                }
-            } catch(System.Net.WebException ex)
-            {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+                { "content-type", contentType },
+                { "secret-key", secretKey }
+            };
 
-            Assert.IsTrue(json.success.Value);
-            Assert.IsTrue(json["private"].Value);
-            Assert.AreEqual(json.data.sample.Value, "Hellow World");
-            Assert.IsNotNull(json.id.Value);
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
+            var response = client.CreateBin(binBody, headers);
 
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.IsTrue(response.Body["private"].Value);
+
+            Assert.AreEqual(response.Body.data.sample.Value, "Hellow World");
+            Assert.IsNotNull(response.Body.id.Value);
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
         }
 
         [TestMethod]
         public void AddPublicBin()
         {
-            HttpWebRequest request;
-            HttpWebResponse response =null;
-
-            string endPoint = "https://api.jsonbin.io/b";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-            request.Headers["private"] = "false";
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
+            string binBody = JsonConvert.SerializeObject(new
             {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "Hellow World"
-                });
+                sample = "Hello World"
+            });
 
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-            
-            try
+            var headers = new Dictionary<string, string>
             {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
+                { "content-type", contentType },
+                { "secret-key", secretKey },
+                { "private", "false"}
+            };
 
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-            {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+            var response = client.CreateBin(binBody, headers);
 
-            Assert.IsTrue(json.success.Value);
-            Assert.IsFalse(json["private"].Value);
-            Assert.AreEqual(json.data.sample.Value, "Hellow World");
-            Assert.IsNotNull(json.id.Value);
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
-        }
-
-        [TestMethod]
-        public void AddPublicBintoCollection()
-        {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-            request.Headers["private"] = "false";
-            request.Headers["collection-id"] = "5efa1fd57f16b71d48a81da8";
-            var CollectionId = request.Headers["collection-id"];
-            request.Headers["name"] = "Auto1";
-            var binName = request.Headers["name"];
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
-            {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "Hellow World"
-                });
-
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-       
-            try
-            {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-            {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
-            Assert.IsTrue(json.success.Value);
-            Assert.IsFalse(json["private"].Value);
-            Assert.AreEqual(json.data.sample.Value, "Hellow World");
-            Assert.IsNotNull(json.id.Value);
-            Assert.AreEqual(json.collectionID.Value, CollectionId);
-            Assert.AreEqual(json.binName.Value, binName);
-        }
-
-        [TestMethod]
-        public void AddPrivateBintoCollection()
-        {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-            request.Headers["private"] = "true";
-            request.Headers["collection-id"] = "5efa1fd57f16b71d48a81da8";
-            var CollectionId = request.Headers["collection-id"];
-            request.Headers["name"] = "Auto1";
-            var binName = request.Headers["name"];
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
-            {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "Hellow World"
-                });
-
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-            try
-            {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-            {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
-            Assert.IsTrue(json.success.Value);
-            Assert.IsTrue(json["private"].Value);
-            Assert.AreEqual(json.data.sample.Value, "Hellow World");
-            Assert.IsNotNull(json.id.Value);
-            Assert.AreEqual(json.collectionID.Value, CollectionId);
-            Assert.AreEqual(json.binName.Value, binName);
-        }
-
-        [TestMethod]
-        public void AddBinWithInvalidHeaders()
-        {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "POST";
-            request.ContentType = "application/json; charset=UTF-8";
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
-            {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "Hellow World"
-                });
-
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-           
-            try
-            {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-            {
-                response = (HttpWebResponse)ex.Response;
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);                 
-           
-                }
-            }
-
-            Assert.AreEqual(response.StatusCode, HttpStatusCode.Unauthorized);
-            Assert.IsFalse(json.success.Value);
-            Assert.AreEqual(json.message.Value, "You need to pass a secret-key in the header to Create a Bin");
-           
-        }
-
-
-
-        [TestMethod]
-        public void GetPublicBin()
-        {
-            HttpWebRequest request;
-            HttpWebResponse response;
-            
-            string endPoint = "https://api.jsonbin.io/b/5efcb8cfbb5fbb1d25624675"; // how get id from respons dinamically
-
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "GET";
-            
-            dynamic json;
-            try
-            {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-
-            {
-                response = (HttpWebResponse)ex.Response;
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                     string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.IsFalse(response.Body["private"].Value);
+            Assert.AreEqual(response.Body.data.sample.Value, "Hello World");
+            Assert.IsNotNull(response.Body.id.Value);
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
-            Assert.AreEqual(json.sample.Value, "Hello World");
-
         }
-
         [TestMethod]
         public void GetPrivateBin()
         {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b/5efcb939bb5fbb1d256246af"; 
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "GET";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-
-            dynamic json;
-            try
+            //create bin
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
             {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
+                { "secret-key", secretKey },
+                {"content-type", contentType }
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+            
+            var headers = new Dictionary<string, string>
             {
-                response = (HttpWebResponse)ex.Response;
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+                { "secret-key", secretKey }
+            };
+
+            var response = client.ReadBin(createdBinId, headers);
+
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
-            Assert.AreEqual(json.sample.Value, "Hello World");
+            Assert.AreEqual(response.Body.sample.Value, "Hello World");
 
+        }
+
+        [TestMethod]
+        public void UpdatePrivateBinNoVersioning()
+        {
+            //create bin
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                {"content-type", contentType }
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+            //update bin
+            var headers = new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                { "private", "true" },
+                { "versioning", "false" },
+                { "content-type", contentType }
+
+            };
+
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "NewBin"
+            });
+
+            var response = client.UpdateBin(createdBinId, binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.AreEqual(response.Body.data.sample.Value, "NewBin");
+            Assert.AreEqual(response.Body.parentId.Value, createdBinId); 
+            Assert.IsNull(response.Body["version"]);
         }
 
         [TestMethod]
         public void UpdatePublicBinNoVersioning()
         {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b/5efcacd4bb5fbb1d25623f04";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "PUT";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-            request.Headers["private"] = "true";
-            request.Headers["versioning"] = "false";
-
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
+            //create public bin
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
             {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "NewBin"
-                });
-
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-            try
+                { "secret-key", secretKey },
+                {"content-type", contentType },
+                { "private", "false" }
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+            //update bin
+            var headers = new Dictionary<string, string>
             {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
+                { "secret-key", secretKey },
+                { "private", "false" },
+                { "versioning", "false" },
+                { "content-type", contentType }
 
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
+            };
+
+            string binBody = JsonConvert.SerializeObject(new
             {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+                sample = "NewBinPublic"
+            });
 
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
-            Assert.IsTrue(json.success.Value);
-            Assert.AreEqual(json.data.sample.Value, "NewBin");
-            Assert.AreEqual(json.parentId.Value, "5efcacd4bb5fbb1d25623f04");
-            Assert.IsNull(json["version"] );
+            var response = client.UpdateBin(createdBinId, binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.AreEqual(response.Body.data.sample.Value, "NewBinPublic");
+            Assert.AreEqual(response.Body.parentId.Value, createdBinId);
+            Assert.IsNotNull(response.Body["version"]);
+            Assert.IsTrue(response.Body["version"].Value > 0);
         }
-
-        [TestMethod]
-        public void UpdatePublicBinWithVersioning()
-        {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b/5efc4e2a0bab551d2b69eeb1";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "PUT";
-            request.ContentType = "application/json; charset=UTF-8";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-            request.Headers["private"] = "true";
-            request.Headers["versioning"] = "true";
-            var versioning = request.Headers["versioning"];
-
-
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream(), ASCIIEncoding.ASCII))
-            {
-                string CreateBinBody = JsonConvert.SerializeObject(new
-                {
-                    sample = "NewBin2"
-                });
-
-                streamWriter.Write(CreateBinBody);
-                streamWriter.Flush();
-                streamWriter.Close();
-            }
-
-            dynamic json;
-            try
-            {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
-            {
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-
-            Assert.AreEqual(response.StatusCode.ToString(), "OK");
-            Assert.IsTrue(json.success.Value);
-            Assert.AreEqual(json.data.sample.Value, "NewBin2");
-            Assert.AreEqual(json.parentId.Value, "5efc4e2a0bab551d2b69eeb1");
-            Assert.IsNotNull(json.version);
-        }
-
 
         [TestMethod]
         public void DeleteNewPrivateBin()
         {
-            HttpWebRequest request;
-            HttpWebResponse response = null;
-
-            string endPoint = "https://api.jsonbin.io/b/5efcb4a77f16b71d48a967f3";
-            request = (HttpWebRequest)WebRequest.Create(endPoint); //create http request 
-            request.Method = "DELETE";
-            request.Headers["secret-key"] = "$2b$10$dwnLF2rKEZIsJ2QzogLaBuZG8BTPBXSwIm8tIoIjpLfyOg9n.T2zm";
-
-            dynamic json;
-            try
+           var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
             {
-                response = (HttpWebResponse)request.GetResponse();
-                using (var reader = new System.IO.StreamReader(response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
+                { "secret-key", secretKey },
+                {"content-type", contentType },
+                { "private", "true"}
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
 
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
-            catch (System.Net.WebException ex)
+            //delete created bin
+            var headers = new Dictionary<string, string>
             {
-                response = (HttpWebResponse)ex.Response;
-                using (var reader = new System.IO.StreamReader(ex.Response.GetResponseStream(), ASCIIEncoding.ASCII))
-                {
-                    string responseText = reader.ReadToEnd();
-                    json = JsonConvert.DeserializeObject(responseText);
-                }
-            }
+                { "secret-key", secretKey }
+            };
 
-            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK); 
-            Assert.IsTrue(json.success.Value);
-            Assert.AreEqual(json.id.Value, "5efcb4a77f16b71d48a967f3");
-            Assert.IsTrue(json.message.Value.StartsWith("Bin 5efcb4a77f16b71d48a967f3 is deleted successfully. "));
+            var response = client.DeleteBin(createdBinId, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.AreEqual(response.Body.id.Value, createdBinId);
+            Assert.IsTrue(response.Body.message.Value.StartsWith($"Bin {createdBinId} is deleted successfully. "));
         }
 
+        [TestMethod]
+        public void DeleteNewPublicBin()
+        {
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                {"content-type", contentType },
+
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+
+            //delete created bin
+            var headers = new Dictionary<string, string>
+            {
+                { "secret-key", secretKey }
+            };
+
+            var response = client.DeleteBin(createdBinId, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.AreEqual(response.Body.id.Value, createdBinId);
+            Assert.IsTrue(response.Body.message.Value.StartsWith($"Bin {createdBinId} is deleted successfully. "));
+        }
+
+
+        [TestMethod]
+        public void AddPublicBintoCollection()
+
+        {
+            
+            var headers = new Dictionary<string, string>
+            {
+                { "content-type", contentType },
+                { "secret-key", secretKey },
+                { "private", "false"},
+                { "collection-id", testCollectionId},
+                {"name","Auto1" }
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode.ToString(), "OK");
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.IsFalse(response.Body["private"].Value); // [] as privat service word
+            Assert.AreEqual(response.Body.data.sample.Value, "Hello World");
+            Assert.IsNotNull(response.Body.id.Value);
+            Assert.AreEqual(response.Body.collectionID.Value, testCollectionId);
+            Assert.AreEqual(response.Body.binName.Value, "Auto1");
+        }
+
+        [TestMethod]
+        public void AddPrivateBintoCollection()
+
+        {
+            var headers = new Dictionary<string, string>
+            {
+                { "content-type", contentType },
+                { "secret-key", secretKey },
+                { "private", "true"},
+                { "collection-id", testCollectionId},
+                {"name","Auto1" }
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode.ToString(), "OK");
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.IsTrue(response.Body["private"].Value); // [] as privat service word
+            Assert.AreEqual(response.Body.data.sample.Value, "Hello World");
+            Assert.IsNotNull(response.Body.id.Value);
+            Assert.AreEqual(response.Body.collectionID.Value, testCollectionId);
+            Assert.AreEqual(response.Body.binName.Value, "Auto1");
+            
+        }
+
+        [TestMethod]
+        public void AddBinWithEmptyHeaderSecurity()
+        {
+            var headers = new Dictionary<string, string>
+            {
+
+            {"content-type", contentType }
+
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.Unauthorized);
+            Assert.AreEqual(response.Body.message.Value, "You need to pass a secret-key in the header to Create a Bin");
+                       
+        }
+
+        [TestMethod]
+        public void AddBinWithEmptyHeaderContentType()
+        {
+            var headers = new Dictionary<string, string>
+            {
+
+             { "secret-key", secretKey }
+
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, (HttpStatusCode)422);
+            Assert.AreEqual(response.Body.message.Value, "Expected content type - application/json");
+
+        }
+
+        [TestMethod]
+        public void AddBinWithInvalidHeaderCollectionId()
+        {
+            var headers = new Dictionary<string, string>
+            {
+
+             { "secret-key", secretKey },
+             {"content-type", contentType },
+             { "collection-id", "invalida1fd57f16b71d48a81da7"},
+             {"name","Auto1" }
+
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, (HttpStatusCode)422);
+            Assert.AreEqual(response.Body.message.Value, "Invalid Collection ID");
+
+        }
+
+        [TestMethod]
+        public void AddBinWithInvalidSecretKey()
+        {
+            var headers = new Dictionary<string, string>
+            {
+
+             { "secret-key", "InvalidTest" },
+             {"content-type", contentType },
+             { "collection-id", testCollectionId},
+             {"name","Auto1" }
+
+            };
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "Hello World"
+            });
+
+            var response = client.CreateBin(binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.Unauthorized);
+            Assert.AreEqual(response.Body.message.Value, "Invalid secret key provided.");
+
+        }
+
+
+        [TestMethod]
+        public void GetPublicBin()
+        {
+            //create bin
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                {"content-type", contentType },
+                { "private", "false"}
+
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+
+            var headers = new Dictionary<string, string>
+            {
+                {"name", "TestName" }
+            };
+
+            var response = client.ReadBin(createdBinId, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.AreEqual(response.Body.sample.Value, "Hello World");
+
+            }
+
+        [TestMethod]
+        public void UpdatePrivateBinWithVersioning()
+        {
+            //create public bin
+            var createBinResponse = client.CreateBin(defaultBody, new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                {"content-type", contentType },
+                { "private", "true" }
+            });
+            string createdBinId = createBinResponse.Body.id.Value;
+            //update bin
+            var headers = new Dictionary<string, string>
+            {
+                { "secret-key", secretKey },
+                { "private", "true" },
+                { "versioning", "true" },
+                { "content-type", contentType }
+
+            };
+
+            string binBody = JsonConvert.SerializeObject(new
+            {
+                sample = "NewBinPublic2"
+            });
+
+            var response = client.UpdateBin(createdBinId, binBody, headers);
+
+            Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);
+            Assert.IsTrue(response.Body.success.Value);
+            Assert.AreEqual(response.Body.data.sample.Value, "NewBinPublic2");
+            Assert.AreEqual(response.Body.parentId.Value, createdBinId);
+            Assert.IsNotNull(response.Body["version"]);
+            Assert.IsTrue(response.Body["version"].Value > 0);
+        }
 
         [TestCleanup]
         public void Cleanup()
