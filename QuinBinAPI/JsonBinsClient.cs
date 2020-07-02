@@ -87,7 +87,7 @@ namespace QuinBinAPI
 
             return GetResponseWithoutException();
         }
-        //send request with http exeption handling, thanks google;)
+        //send request with http exeption handling
         private dynamic GetResponseWithoutException()
         {
             HttpWebResponse response;
