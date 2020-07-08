@@ -20,7 +20,9 @@ namespace QuinBinAPI
 
         public dynamic CreateBin(string _body, Dictionary<string, string> _headers)
         {
-            request = (HttpWebRequest)WebRequest.Create(endpoint);
+             request = (HttpWebRequest)WebRequest.Create(endpoint);
+           // request = HttpWebRequest.Create(endpoint);
+
             request.Method = "POST";
             foreach (var h in _headers)
             {
@@ -29,16 +31,16 @@ namespace QuinBinAPI
                 else
                     request.Headers[h.Key] = h.Value;
             }
-            //send body
-            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream())) //3rd party coonection , using to close the stream
+            //work with body
+            using (var streamWriter = new System.IO.StreamWriter(request.GetRequestStream())) // httpWebRequest sent request as strim and receive response as a stream
             {
-                streamWriter.Write(_body);
+                streamWriter.Write(_body); //we write body into stream 
             }
 
-            return GetResponseWithoutException();
+            return GetResponseWithoutException(); //method send request , parse response and handle exeptions 
         }
 
-        public dynamic ReadBin(string binId, Dictionary<string, string> _headers = null)
+        public dynamic ReadBin(string binId, Dictionary<string, string> _headers)
         {
             request = (HttpWebRequest)WebRequest.Create(endpoint + $"/{binId}");
             request.Method = "GET";
@@ -53,7 +55,7 @@ namespace QuinBinAPI
             return GetResponseWithoutException();
         }
 
-        public dynamic UpdateBin(string binId, string _body, Dictionary<string, string> _headers = null)
+        public dynamic UpdateBin(string binId, string _body, Dictionary<string, string> _headers)
         {
             request = (HttpWebRequest)WebRequest.Create(endpoint + $"/{binId}");
             request.Method = "PUT";
@@ -73,7 +75,7 @@ namespace QuinBinAPI
             return GetResponseWithoutException();
         }
 
-        public dynamic DeleteBin(string binId, Dictionary<string, string> _headers = null)
+        public dynamic DeleteBin(string binId, Dictionary<string, string> _headers)
         {
             request = (HttpWebRequest)WebRequest.Create(endpoint + $"/{binId}"); //$ allows parameters
             request.Method = "DELETE";
@@ -88,12 +90,12 @@ namespace QuinBinAPI
             return GetResponseWithoutException();
         }
         //send request with http exeption handling
-        private dynamic GetResponseWithoutException()
+        private dynamic GetResponseWithoutException() 
         {
             HttpWebResponse response;
             try
             {
-                response = (HttpWebResponse)request.GetResponse();
+                response = (HttpWebResponse)request.GetResponse(); //method to send request
             }
             catch (System.Net.WebException ex)
             {
@@ -102,11 +104,11 @@ namespace QuinBinAPI
             using (var reader = new System.IO.StreamReader(response.GetResponseStream()))
             {
                 string responseText = reader.ReadToEnd();
-                return new
+                return new //create dynamic obj, to work with this obj in our tests
                 {
                     StatusCode = response.StatusCode,
                     Headers = response.Headers,
-                    Body = JsonConvert.DeserializeObject(responseText) //convert obj to string
+                    Body = JsonConvert.DeserializeObject(responseText) //convert string to json obj
                 };
             }
         }

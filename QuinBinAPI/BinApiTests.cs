@@ -19,7 +19,7 @@ namespace QuinBinAPI
         [TestMethod]
         public void AddPrivateBin()
         {
-
+            // object to string
             string binBody = JsonConvert.SerializeObject(new
             {
                 sample = "Hellow World"
@@ -32,7 +32,7 @@ namespace QuinBinAPI
             };
 
             var response = client.CreateBin(binBody, headers);
-
+            
             Assert.IsTrue(response.Body.success.Value);
             Assert.IsTrue(response.Body["private"].Value);
 
@@ -403,6 +403,7 @@ namespace QuinBinAPI
 
             };
 
+
             string binBody = JsonConvert.SerializeObject(new
             {
                 sample = "NewBinPublic2"
@@ -416,6 +417,7 @@ namespace QuinBinAPI
             Assert.AreEqual(response.Body.parentId.Value, createdBinId);
             Assert.IsNotNull(response.Body["version"]);
             Assert.IsTrue(response.Body["version"].Value > 0);
+            
         }
 
         [TestCleanup]
